@@ -7,7 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/iconify/3.1.0/iconify.min.js"></script>
     <style>
         body {
-            font-family: 'Comic Sans MS', sans-serif;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
             background-color: #f0f8ff;
             display: flex;
             justify-content: center;
@@ -509,7 +509,7 @@ const ingredients = {
             return svgDoc.documentElement;
         }
 
-        async function showResult() {
+async function showResult() {
             document.getElementById('letterSelection').style.display = 'none';
             document.getElementById('ingredientSelection').style.display = 'none';
             document.getElementById('result').style.display = 'block';
@@ -522,7 +522,8 @@ const ingredients = {
             ingredientLetters.innerHTML = '';
             placedIngredients = [];
 
-            for (let ingredient of selectedIngredients) {
+            // Create an array to store promises for each ingredient
+            const ingredientPromises = selectedIngredients.map(async (ingredient, index) => {
                 const iconSize = 160;
                 const position = findNonOverlappingPosition(iconSize / 2);
 
@@ -530,36 +531,46 @@ const ingredients = {
                     const { x, y } = position;
                     const rotation = Math.random() * 360;
 
-                    getIconSVG(ingredient.icon).then(iconSVG => {
-                        const halfSize = iconSize / 2;
+                    const iconSVG = await getIconSVG(ingredient.icon);
+                    const halfSize = iconSize / 2;
 
-                        iconSVG.setAttribute('x', x - halfSize);
-                        iconSVG.setAttribute('y', y - halfSize);
-                        iconSVG.setAttribute('width', iconSize.toString());
-                        iconSVG.setAttribute('height', iconSize.toString());
-                        iconSVG.style.overflow = 'visible';
-                        iconSVG.setAttribute('transform', `rotate(${rotation} ${x} ${y})`);
+                    iconSVG.setAttribute('x', x - halfSize);
+                    iconSVG.setAttribute('y', y - halfSize);
+                    iconSVG.setAttribute('width', iconSize.toString());
+                    iconSVG.setAttribute('height', iconSize.toString());
+                    iconSVG.style.overflow = 'visible';
+                    iconSVG.setAttribute('transform', `rotate(${rotation} ${x} ${y})`);
 
-                        champonSVG.appendChild(iconSVG);
+                    // Create ingredient letter and name
+                    const letterDiv = document.createElement('div');
+                    letterDiv.style.marginBottom = '10px';
+                    
+                    const letterSpan = document.createElement('span');
+                    letterSpan.textContent = ingredient.name[0].toUpperCase();
+                    letterSpan.className = 'ingredient-letter';
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = ingredient.name;
+                    nameSpan.className = 'ingredient-name';
+                    
+                    letterDiv.appendChild(letterSpan);
+                    letterDiv.appendChild(nameSpan);
 
-                        // Add ingredient letter and name to the left
-                        const letterDiv = document.createElement('div');
-                        letterDiv.style.marginBottom = '10px';
-                        
-                        const letterSpan = document.createElement('span');
-                        letterSpan.textContent = ingredient.name[0].toUpperCase();
-                        letterSpan.className = 'ingredient-letter';
-                        
-                        const nameSpan = document.createElement('span');
-                        nameSpan.textContent = ingredient.name;
-                        nameSpan.className = 'ingredient-name';
-                        
-                        letterDiv.appendChild(letterSpan);
-                        letterDiv.appendChild(nameSpan);
-                        ingredientLetters.appendChild(letterDiv);
-                    });
+                    return { iconSVG, letterDiv, index };
                 }
-            }
+                return null;
+            });
+
+            // Wait for all ingredient promises to resolve
+            const results = await Promise.all(ingredientPromises);
+
+            // Add ingredients to the SVG and ingredient list in the correct order
+            results.filter(result => result !== null)
+                   .sort((a, b) => a.index - b.index)
+                   .forEach(result => {
+                       champonSVG.appendChild(result.iconSVG);
+                       ingredientLetters.appendChild(result.letterDiv);
+                   });
 
             const champonDescription = document.getElementById('champonDescription');
             champonDescription.textContent = `Your delicious Champon contains: ${selectedIngredients.map(i => i.name).join(', ')}. Enjoy your unique creation!`;
