@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Your Custom Champon!</title>
-	<link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/iconify/3.1.0/iconify.min.js"></script>
+    <link rel="stylesheet" href="countrySelect.min.css">
     <style>
         body {
             font-family: 'Comic Sans MS','Comic Neue', cursive, sans-serif;
@@ -77,12 +78,12 @@
             margin-right: 6px;
             font-size: 20px;
         }
-		.letter-row {
-             display: flex;
+        .letter-row {
+            display: flex;
             justify-content: center;
             width: 100%;
             margin-bottom: 10px;
-}
+        }
         #selectedIngredients {
             font-size: 16px;
             margin-bottom: 15px;
@@ -135,7 +136,7 @@
         #newChamponButton:hover {
             background-color: #ff5252;
         }
-		#loadingScreen {
+        #loadingScreen {
             position: fixed;
             top: 0;
             left: 0;
@@ -157,23 +158,30 @@
             font-size: 24px;
             color: #333;
         }
-		#footer {
-			font-size: 12px;
-			color: #888;
-			text-align: center;
-			margin-top: 20px;
-			position: absolute;
-			bottom: 10px;
-			width: 100%;
-}
-
+        #countrySelection {
+            margin-top: 10px;
+            display: none;
+        }
+        #country_selector {
+            font-size: 16px;
+            padding: 44px;
+            margin-top: 5px;
+            width: 100%;
+            max-width: 300px;
+        }
+        .finish-button {
+            background-color: #ff6b6b !important;
+            margin-top: 10px !important;
+            width: 100%;
+            max-width: 300px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Create Your Custom Champon!</h1>
         <div id="letterSelection">
-            <p>Choose 4 letters to create your Champon:</p>
+            <p>Choose 3-5 letters to create your Champon:</p>
             <div class="letter-buttons">
                 <!-- Letter buttons will be added here dynamically -->
             </div>
@@ -182,12 +190,17 @@
             <p>Choose an ingredient:</p>
             <!-- Ingredient buttons will be added here dynamically -->
         </div>
+        <div id="countrySelection">
+            <p>Where is it from?</p>
+            <input id="country_selector" type="text">
+            <input id="country_selector_code" type="hidden">
+        </div>
         <div id="selectedIngredients"></div>
         <div id="result">
             <h2>Your Custom Champon is Ready!</h2>
             <div id="champonContainer">
                 <div id="ingredientLetters">
-                    <!-- Ingredient letters and names will be added here dynamically -->
+                    <!-- Ingredient letters, names, and countries will be added here dynamically -->
                 </div>
                 <svg id="champonSVG" width="500" height="450" viewBox="0 0 1142 880">
                     <image href="champon.png" width="1142" height="880" />
@@ -199,9 +212,19 @@
         </div>
     </div>
 
+    <div id="loadingScreen" style="display: none;">
+        <img src="cat.gif" alt="Loading">
+        <div id="loadingText">Creating your custom Champon...</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="countrySelect.min.js"></script>
     <script>
         const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-const ingredients = {
+		const letterSelectionText = 'Choose 3-5 letters to create your Champon:';
+$('#letterSelection').find('p').text(letterSelectionText);
+
+        const ingredients = {
             'A': [
                 { name: 'Apple', icon: 'twemoji:red-apple' },
                 { name: 'Avocado', icon: 'twemoji:avocado' },
@@ -312,7 +335,6 @@ const ingredients = {
                 { name: 'Strawberry', icon: 'twemoji:strawberry' },
                 { name: 'Sausage', icon: 'twemoji:hot-dog' },
                 { name: 'Salmon', icon: 'twemoji:fish' },
-				{ name: 'Squid', icon: 'noto-v1:squid' },
             ],
             'T': [
                 { name: 'Tomato', icon: 'twemoji:tomato' },
@@ -347,101 +369,149 @@ const ingredients = {
 
         let selectedIngredients = [];
         let placedIngredients = [];
+        let currentIngredient = null;
+
+        $(document).ready(function() {
+            createLetterButtons();
+            initializeCountrySelect();
+            $('#newChamponButton').on('click', resetChampon);
+        });
 
         function createLetterButtons() {
-            const letterButtons = document.querySelector('.letter-buttons');
+            const letterButtons = $('.letter-buttons');
             const halfLength = Math.ceil(letters.length / 2);
-    
+
             for (let i = 0; i < 2; i++) {
-                const row = document.createElement('div');
-                row.classList.add('letter-row');
-        
+                const row = $('<div>').addClass('letter-row');
                 const start = i * halfLength;
                 const end = Math.min((i + 1) * halfLength, letters.length);
-        
+
                 for (let j = start; j < end; j++) {
                     const letter = letters[j];
-                    const button = document.createElement('button');
-                    button.textContent = letter;
-                    button.classList.add('letter-button');
-                    button.onclick = () => showIngredients(letter);
-                    row.appendChild(button);
+                    const button = $('<button>')
+                        .text(letter)
+                        .addClass('letter-button')
+                        .on('click', function() {
+                            if (!$('#countrySelection').is(':visible')) {
+                                showIngredients(letter);
+                            }
+                        });
+                    row.append(button);
                 }
-        
-             letterButtons.appendChild(row);
-        }
-    }
-
-
-        function showIngredients(letter) {
-            const ingredientList = document.getElementById('ingredientSelection');
-            ingredientList.innerHTML = '<p>Choose an ingredient:</p>';
-            ingredientList.style.display = 'block';
-
-            const letterIngredients = ingredients[letter] || defaultIngredients;
-
-            letterIngredients.forEach(ingredient => {
-                const button = document.createElement('button');
-                button.classList.add('ingredient-button');
-                button.onclick = () => selectIngredient(ingredient);
-                
-                const icon = document.createElement('span');
-                icon.className = 'iconify';
-                icon.setAttribute('data-icon', ingredient.icon);
-                
-                const text = document.createTextNode(ingredient.name);
-                
-                button.appendChild(icon);
-                button.appendChild(text);
-                ingredientList.appendChild(button);
-            });
-        }
-
-        function selectIngredient(ingredient) {
-            selectedIngredients.push(ingredient);
-            updateSelectedIngredients();
-
-            if (selectedIngredients.length === 4) {
-                showLoadingScreen();
-            } else {
-                document.getElementById('ingredientSelection').style.display = 'none';
+                letterButtons.append(row);
             }
         }
 
-        function updateSelectedIngredients() {
-            const selectedIngredientsDiv = document.getElementById('selectedIngredients');
-            selectedIngredientsDiv.textContent = `Selected ingredients: ${selectedIngredients.map(i => i.name).join(', ')}`;
+        function showIngredients(letter) {
+            const ingredientList = $('#ingredientSelection');
+            ingredientList.html('<p>Choose an ingredient:</p>');
+            ingredientList.show();
+
+            const letterIngredients = ingredients[letter] || [];
+
+            letterIngredients.forEach(ingredient => {
+                const button = $('<button>')
+                    .addClass('ingredient-button')
+                    .on('click', () => showCountrySelection(ingredient));
+
+                const icon = $('<span>')
+                    .addClass('iconify')
+                    .attr('data-icon', ingredient.icon);
+
+                const text = $('<span>').text(ingredient.name);
+
+                button.append(icon, text);
+                ingredientList.append(button);
+            });
         }
+
+        function initializeCountrySelect() {
+            $("#country_selector").countrySelect({
+                defaultCountry: "jp",
+                preferredCountries: ['us', 'gb', 'ca', 'au', 'jp'],
+                responsiveDropdown: true
+            });
+        }
+
+        function showCountrySelection(ingredient) {
+            currentIngredient = ingredient;
+            $('#ingredientSelection').hide();
+            $('#countrySelection').show();
+
+            $("#country_selector").countrySelect("destroy");
+            initializeCountrySelect();
+
+            $("#country_selector").on('change', function() {
+                const countryData = $("#country_selector").countrySelect("getSelectedCountryData");
+                selectIngredient(currentIngredient, countryData);
+            });
+        }
+
+        function selectIngredient(ingredient, countryData) {
+            selectedIngredients.push({ ...ingredient, country: countryData });
+            updateSelectedIngredients();
+
+            $('#countrySelection').hide();
+
+            if (selectedIngredients.length === 5) {
+                showLoadingScreen();
+            } else if (selectedIngredients.length >= 3) {
+                showFinishOption();
+            } else {
+                $('#letterSelection').show();
+            }
+
+            $("#country_selector").off('change');
+        }
+
+        function showFinishOption() {
+            // Remove existing finish button if it exists
+            $('.finish-button').remove();
+            
+            const finishButton = $('<button>')
+                .text('Finish and Create Champon')
+                .addClass('letter-button finish-button')
+                .on('click', showLoadingScreen);
+
+            $('#letterSelection')
+                .show()
+                .append(finishButton);
+        }
+
+        function updateSelectedIngredients() {
+            const selectedIngredientsDiv = $('#selectedIngredients');
+            selectedIngredientsDiv.text(`Selected ingredients: ${selectedIngredients.map(i => `${i.name} from ${i.country.name}`).join(', ')}`);
+        }
+
         function showLoadingScreen() {
-            const loadingScreen = document.getElementById('loadingScreen');
-            loadingScreen.style.display = 'flex';
-    
-            const loadingText = document.getElementById('loadingText');
+            $('#loadingScreen').show();
+
             let dots = '';
             const intervalId = setInterval(() => {
                 dots = dots.length < 3 ? dots + '.' : '';
-                loadingText.textContent = `Creating your custom Champon${dots}`;
+                $('#loadingText').text(`Creating your custom Champon${dots}`);
             }, 500);
 
             setTimeout(() => {
                 clearInterval(intervalId);
-                loadingScreen.style.display = 'none';
+                $('#loadingScreen').hide();
                 showResult();
             }, 2000);
         }
+
         function getRandomPosition() {
-            const bowlCenterX = 571; // Approximate center X of the bowl
-            const bowlCenterY = 880 - 612; // Approximate center Y of the bowl (adjusting for bottom-left origin)
-            const bowlRadiusX = 440; // Approximate horizontal radius of the bowl
-            const bowlRadiusY = 225; // Approximate vertical radius of the bowl
+            const bowlCenterX = 571;
+            const bowlCenterY = 880 - 612;
+            const bowlRadiusX = 440;
+            const bowlRadiusY = 225;
 
             let angle = Math.random() * 2 * Math.PI;
-            let r = Math.sqrt(Math.random()) * 0.8; // Reduce to 80% to keep ingredients more centered
+            let r = Math.sqrt(Math.random()) * 0.8;
 
-            let x = bowlCenterX + r * bowlRadiusX * Math.cos(angle);
-            let y = bowlCenterY + r * bowlRadiusY * Math.sin(angle);
-
-            return { x, y };
+            return {
+                x: bowlCenterX + r * bowlRadiusX * Math.cos(angle),
+                y: bowlCenterY + r * bowlRadiusY * Math.sin(angle)
+            };
         }
 
         function checkCollision(x, y, size) {
@@ -450,10 +520,10 @@ const ingredients = {
                 const dy = y - placed.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 if (distance < size + placed.size) {
-                    return true; // Collision detected
+                    return true;
                 }
             }
-            return false; // No collision
+            return false;
         }
 
         function findNonOverlappingPosition(size) {
@@ -468,7 +538,7 @@ const ingredients = {
                 placedIngredients.push({ x: position.x, y: position.y, size: size });
                 return position;
             }
-            return null; // Couldn't find a non-overlapping position
+            return null;
         }
 
         async function getIconSVG(iconName) {
@@ -479,91 +549,81 @@ const ingredients = {
             return svgDoc.documentElement;
         }
 
-async function showResult() {
-            document.getElementById('letterSelection').style.display = 'none';
-            document.getElementById('ingredientSelection').style.display = 'none';
-            document.getElementById('result').style.display = 'block';
+    async function showResult() {
+        $('#letterSelection').hide();
+        $('#ingredientSelection').hide();
+        $('#countrySelection').hide();
+        $('#result').show();
 
-            const champonSVG = document.getElementById('champonSVG');
-            const ingredientLetters = document.getElementById('ingredientLetters');
+        const champonSVG = $('#champonSVG');
+        const ingredientLetters = $('#ingredientLetters');
 
-            // Clear previous results
-            champonSVG.innerHTML = '<image href="champon.png" width="1142" height="880" />';
-            ingredientLetters.innerHTML = '';
-            placedIngredients = [];
+        // Clear previous results
+        champonSVG.html('<image href="champon.png" width="1142" height="880" />');
+        ingredientLetters.empty();
+        placedIngredients = [];
 
-            // Create an array to store promises for each ingredient
-            const ingredientPromises = selectedIngredients.map(async (ingredient, index) => {
-                const iconSize = 160;
-                const position = findNonOverlappingPosition(iconSize / 2);
+        // Create an array to store promises for each ingredient
+        const ingredientPromises = selectedIngredients.map(async (ingredient, index) => {
+            const iconSize = 160;
+            const position = findNonOverlappingPosition(iconSize / 2);
 
-                if (position) {
-                    const { x, y } = position;
-                    const rotation = Math.random() * 360;
+            if (position) {
+                const { x, y } = position;
+                const rotation = Math.random() * 360;
 
-                    const iconSVG = await getIconSVG(ingredient.icon);
-                    const halfSize = iconSize / 2;
+                const iconSVG = await getIconSVG(ingredient.icon);
+                const halfSize = iconSize / 2;
 
-                    iconSVG.setAttribute('x', x - halfSize);
-                    iconSVG.setAttribute('y', y - halfSize);
-                    iconSVG.setAttribute('width', iconSize.toString());
-                    iconSVG.setAttribute('height', iconSize.toString());
-                    iconSVG.style.overflow = 'visible';
-                    iconSVG.setAttribute('transform', `rotate(${rotation} ${x} ${y})`);
+                $(iconSVG).attr({
+                    x: x - halfSize,
+                    y: y - halfSize,
+                    width: iconSize,
+                    height: iconSize,
+                    transform: `rotate(${rotation} ${x} ${y})`
+                }).css('overflow', 'visible');
 
-                    // Create ingredient letter and name
-                    const letterDiv = document.createElement('div');
-                    letterDiv.style.marginBottom = '10px';
-                    
-                    const letterSpan = document.createElement('span');
-                    letterSpan.textContent = ingredient.name[0].toUpperCase();
-                    letterSpan.className = 'ingredient-letter';
-                    
-                    const nameSpan = document.createElement('span');
-                    nameSpan.textContent = ingredient.name;
-                    nameSpan.className = 'ingredient-name';
-                    
-                    letterDiv.appendChild(letterSpan);
-                    letterDiv.appendChild(nameSpan);
+                // Create ingredient letter, name, and country
+                const letterDiv = $('<div>').css('marginBottom', '10px');
+                
+                const letterSpan = $('<span>')
+                    .text(ingredient.name[0].toUpperCase())
+                    .addClass('ingredient-letter');
+                
+                const nameSpan = $('<span>')
+                    .text(`${ingredient.name} from ${ingredient.country.name}`)
+                    .addClass('ingredient-name');
+                
+                letterDiv.append(letterSpan, nameSpan);
 
-                    return { iconSVG, letterDiv, index };
-                }
-                return null;
-            });
+                return { iconSVG, letterDiv, index };
+            }
+            return null;
+        });
 
-            // Wait for all ingredient promises to resolve
-            const results = await Promise.all(ingredientPromises);
+        // Wait for all ingredient promises to resolve
+        const results = await Promise.all(ingredientPromises);
 
-            // Add ingredients to the SVG and ingredient list in the correct order
-            results.filter(result => result !== null)
-                   .sort((a, b) => a.index - b.index)
-                   .forEach(result => {
-                       champonSVG.appendChild(result.iconSVG);
-                       ingredientLetters.appendChild(result.letterDiv);
-                   });
+        // Add ingredients to the SVG and ingredient list in the correct order
+        results.filter(result => result !== null)
+               .sort((a, b) => a.index - b.index)
+               .forEach(result => {
+                   champonSVG.append(result.iconSVG);
+                   ingredientLetters.append(result.letterDiv);
+               });
 
-            const champonDescription = document.getElementById('champonDescription');
-            champonDescription.textContent = `Your delicious Champon contains: ${selectedIngredients.map(i => i.name).join(', ')}. Enjoy your unique creation!`;
-        }
+        const champonDescription = $('#champonDescription');
+        champonDescription.text(`Your delicious Champon contains: ${selectedIngredients.map(i => `${i.name} from ${i.country.name}`).join(', ')}. Enjoy!`);
+    }
 
-        function resetChampon() {
-            selectedIngredients = [];
-            document.getElementById('result').style.display = 'none';
-            document.getElementById('letterSelection').style.display = 'block';
-            document.getElementById('selectedIngredients').textContent = '';
-            updateSelectedIngredients();
-        }
-
-        createLetterButtons();
-
-        document.getElementById('newChamponButton').addEventListener('click', resetChampon);
-    </script>
-<div id="loadingScreen" style="display: none;">
-    <img src="cat.gif" alt="Loading">
-    <div id="loadingText">Creating your custom Champon...</div>
-</div>
-<footer id="footer">
-    Made by Mark
-</footer>
+    function resetChampon() {
+		selectedIngredients = [];
+		$('#result').hide();
+		$('#letterSelection').show()
+			.find('button:not(.letter-button)').remove(); // Remove finish button
+		$('#selectedIngredients').text('');
+		updateSelectedIngredients();
+}
+</script>
 </body>
 </html>
