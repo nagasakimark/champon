@@ -175,6 +175,62 @@
             width: 100%;
             max-width: 300px;
         }
+		        #qrCodeButton {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            z-index: 100;
+            display: none; /* Initially hidden, shown only on first screen */
+        }
+
+        #qrCodeButton .iconify {
+            width: 40px;
+            height: 40px;
+            color: #333;
+        }
+
+        #qrModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #qrModalContent {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        #qrModalClose {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: #333;
+        }
+
+        #qrModalImage {
+            max-width: 100%;
+            max-height: calc(90vh - 60px);
+            display: block;
+        }
+
     </style>
 </head>
 <body>
@@ -216,7 +272,17 @@
         <img src="cat.gif" alt="Loading">
         <div id="loadingText">Creating your custom Champon...</div>
     </div>
+	<button id="qrCodeButton">
+        <span class="iconify" data-icon="mdi:qrcode"></span>
+    </button>
 
+    <!-- Add QR code modal -->
+    <div id="qrModal">
+        <div id="qrModalContent">
+            <button id="qrModalClose">&times;</button>
+            <img id="qrModalImage" src="qrcode.png" alt="QR Code">
+        </div>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="countrySelect.min.js"></script>
     <script>
@@ -376,6 +442,35 @@ $('#letterSelection').find('p').text(letterSelectionText);
             createLetterButtons();
             initializeCountrySelect();
             $('#newChamponButton').on('click', resetChampon);
+		            $('#qrCodeButton').show();
+
+            // QR code button click handler
+            $('#qrCodeButton').on('click', function() {
+                $('#qrModal').css('display', 'flex');
+            });
+
+            // Close modal when clicking the close button
+            $('#qrModalClose').on('click', function() {
+                $('#qrModal').hide();
+            });
+
+            // Close modal when clicking outside the content
+            $('#qrModal').on('click', function(e) {
+                if (e.target === this) {
+                    $(this).hide();
+                }
+            });
+
+            // Hide QR code button when moving to other screens
+            function hideQRButton() {
+                $('#qrCodeButton').hide();
+            }
+
+            // Show QR button when resetting
+            function showQRButton() {
+                $('#qrCodeButton').show();
+            }
+
         });
 
         function createLetterButtons() {
@@ -448,27 +543,31 @@ $('#letterSelection').find('p').text(letterSelectionText);
             });
         }
 
-        function selectIngredient(ingredient, countryData) {
-            selectedIngredients.push({ ...ingredient, country: countryData });
-            updateSelectedIngredients();
+    function selectIngredient(ingredient, countryData) {
+        selectedIngredients.push({ ...ingredient, country: countryData });
+        updateSelectedIngredients();
 
-            $('#countrySelection').hide();
+        $('#countrySelection').hide();
 
-            if (selectedIngredients.length === 5) {
-                showLoadingScreen();
-            } else if (selectedIngredients.length >= 3) {
-                showFinishOption();
-            } else {
-                $('#letterSelection').show();
-            }
-
-            $("#country_selector").off('change');
+        if (selectedIngredients.length === 5) {
+            showLoadingScreen();
+        } else if (selectedIngredients.length >= 3) {
+            showFinishOption();
+        } else {
+            $('#letterSelection').show();
+            $('.finish-button').remove(); // Ensure finish button is removed if under 3 ingredients
         }
 
-        function showFinishOption() {
-            // Remove existing finish button if it exists
-            $('.finish-button').remove();
-            
+        $("#country_selector").off('change');
+    }
+
+
+    function showFinishOption() {
+        // Remove any existing finish button first
+        $('.finish-button').remove();
+        
+        // Only show finish button if we have 3 or more ingredients
+        if (selectedIngredients.length >= 3) {
             const finishButton = $('<button>')
                 .text('Finish and Create Champon')
                 .addClass('letter-button finish-button')
@@ -478,6 +577,7 @@ $('#letterSelection').find('p').text(letterSelectionText);
                 .show()
                 .append(finishButton);
         }
+    }
 
         function updateSelectedIngredients() {
             const selectedIngredientsDiv = $('#selectedIngredients');
@@ -618,13 +718,20 @@ $('#letterSelection').find('p').text(letterSelectionText);
     }
 
     function resetChampon() {
-		selectedIngredients = [];
-		$('#result').hide();
-		$('#letterSelection').show()
-			.find('button:not(.letter-button)').remove(); // Remove finish button
-		$('#selectedIngredients').text('');
-		updateSelectedIngredients();
-}
+        selectedIngredients = [];
+        $('#result').hide();
+        $('#letterSelection')
+            .show()
+            .find('.finish-button')
+            .remove(); // Remove finish button specifically
+        $('#ingredientSelection').hide();
+        $('#countrySelection').hide();
+        $('#selectedIngredients').text('');
+        showQRButton();
+        updateSelectedIngredients();
+    }
+
+	
 </script>
 </body>
 </html>
